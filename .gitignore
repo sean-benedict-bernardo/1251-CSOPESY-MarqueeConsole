@@ -1,0 +1,7 @@
+*.exe
+*.bat
+*.zip
+main.py
+frames/
+ascii_frames/
+.vscode/
