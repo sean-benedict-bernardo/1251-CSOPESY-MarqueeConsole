@@ -1,5 +1,4 @@
 *.exe
-*.bat
 *.zip
 main.py
 frames/
