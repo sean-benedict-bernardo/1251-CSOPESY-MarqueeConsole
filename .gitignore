@@ -1,6 +1,4 @@
 *.exe
 *.zip
-main.py
-frames/
-ascii_frames/
+*.bat
 .vscode/
