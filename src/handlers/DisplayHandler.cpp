@@ -4,8 +4,112 @@
 #include <windows.h>
 #include <iomanip>
 #include <conio.h>
+#include <fstream>
+#include <map>
 
 using namespace std;
+
+/**
+ * Simple ASCII Art Manager for DisplayHandler
+ */
+class SimpleASCIIArt
+{
+private:
+    map<char, vector<string>> charMap;
+    int artHeight;
+    
+public:
+    SimpleASCIIArt()
+    {
+        artHeight = 6;
+        loadBasicCharacters();
+    }
+    
+    void loadBasicCharacters()
+    {
+        // Load some basic characters from files
+        string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        for (char c : chars)
+        {
+            loadCharacterFromFile(c);
+        }
+        
+        // Add space character
+        vector<string> space(artHeight, "     ");
+        charMap[' '] = space;
+    }
+    
+    void loadCharacterFromFile(char c)
+    {
+        string filename = "src/utils/data/characters/" + string(1, c) + ".txt";
+        ifstream file(filename);
+        vector<string> lines;
+        
+        if (file.is_open())
+        {
+            string line;
+            while (getline(file, line) && lines.size() < artHeight)
+            {
+                // Ensure consistent width
+                if (line.length() < 10) {
+                    line += string(10 - line.length(), ' ');
+                }
+                lines.push_back(line);
+            }
+            file.close();
+            
+            // Fill to required height
+            while (lines.size() < artHeight)
+            {
+                lines.push_back(string(10, ' '));
+            }
+        }
+        else
+        {
+            // Create simple fallback
+            vector<string> fallback(artHeight, string(5, ' ') + c + string(4, ' '));
+            lines = fallback;
+        }
+        
+        charMap[c] = lines;
+    }
+    
+    vector<string> textToASCII(const string& text, int scrollPos = 0)
+    {
+        vector<string> result(artHeight);
+        
+        // Calculate visible portion based on scroll
+        string displayText = text + "   " + text; // Add padding for smooth scroll
+        int startPos = scrollPos % displayText.length();
+        
+        // Build ASCII art line by line
+        for (int row = 0; row < artHeight; row++)
+        {
+            string line = "";
+            for (int i = 0; i < min(8, (int)text.length()); i++) // Limit to ~8 chars for width
+            {
+                int charIndex = (startPos + i) % displayText.length();
+                if (charIndex < displayText.length())
+                {
+                    char c = toupper(displayText[charIndex]);
+                    if (charMap.find(c) != charMap.end())
+                    {
+                        line += charMap[c][row];
+                    }
+                    else
+                    {
+                        line += string(10, ' ');
+                    }
+                }
+            }
+            result[row] = line;
+        }
+        
+        return result;
+    }
+    
+    int getHeight() const { return artHeight; }
+};
 
 class DisplayHandler
 {
@@ -26,6 +130,15 @@ private:
     vector<string> textConsoleLines;
     string currentMarqueeText;
     int marqueePosition;
+    
+    // Marquee ASCII art handler
+    SimpleASCIIArt* asciiArt;
+    bool useASCIIArt;
+    
+    // Input area management
+    int inputAreaY;
+    string currentInputLine;
+    bool isInInputMode;
     
     // OS emulator state pointers
     bool *isRunning;
@@ -55,16 +168,40 @@ public:
         consoleWidth = csbi.srWindow.Right - csbi.srWindow.Left + 1;
         consoleHeight = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
         
-        marqueeHeight = 3;  // Top section for marquee
+        marqueeHeight = 8;  // Increased height for ASCII art marquee
         textConsoleWidth = consoleWidth * 0.6;  // Left 60% for text console
         gifSectionWidth = consoleWidth * 0.4;   // Right 40% for gif section
         textConsoleHeight = consoleHeight - marqueeHeight;
         
         marqueePosition = 0;
         currentMarqueeText = *marqueeText;
+        isInInputMode = false;
+        currentInputLine = "";
+        
+        // Calculate input area position (last line of text console)
+        inputAreaY = marqueeHeight + textConsoleHeight - 1;
+        
+        // Initialize ASCII art support
+        try {
+            asciiArt = new SimpleASCIIArt();
+            useASCIIArt = true;
+        } catch (const exception& e) {
+            asciiArt = nullptr;
+            useASCIIArt = false;
+        }
         
         // Initialize console lines storage
-        textConsoleLines.reserve(textConsoleHeight);
+        textConsoleLines.reserve(textConsoleHeight - 2); // Reserve space minus input area
+    }
+    
+    /**
+     * Destructor - Clean up resources
+     */
+    ~DisplayHandler()
+    {
+        if (asciiArt) {
+            delete asciiArt;
+        }
     }
     
     /**
@@ -83,6 +220,7 @@ public:
         drawMarqueeSection();
         drawTextConsole();
         drawGifSection();
+        drawInputArea();
         
         // Restore cursor visibility if it was visible
         if (wasVisible)
@@ -109,8 +247,9 @@ public:
     {
         textConsoleLines.push_back(line);
         
-        // Keep only the lines that fit in the console height
-        if (textConsoleLines.size() > textConsoleHeight - 2) // -2 for borders/prompt
+        // Keep only the lines that fit in the console height (minus input area)
+        int maxLines = textConsoleHeight - 2; // -2 for input area
+        if (textConsoleLines.size() > maxLines)
         {
             textConsoleLines.erase(textConsoleLines.begin());
         }
@@ -129,12 +268,14 @@ public:
     }
     
     /**
-     * Updates the marquee position for animation
+     * Updates the marquee position and text for animation
      * @param position New marquee position
      */
     void updateMarqueePosition(int position)
     {
         marqueePosition = position;
+        // Update current marquee text cache
+        currentMarqueeText = *marqueeText;
     }
     
     /**
@@ -142,7 +283,11 @@ public:
      */
     void displayPrompt()
     {
-        setCursorPosition(0, marqueeHeight + textConsoleHeight - 1);
+        isInInputMode = true;
+        currentInputLine = "";
+        
+        // Position cursor at the input area
+        setCursorPosition(0, inputAreaY);
         cout << "CSOPESY> ";
         
         // Show cursor for input
@@ -150,6 +295,16 @@ public:
         GetConsoleCursorInfo(hConsole, &cursorInfo);
         cursorInfo.bVisible = true;
         SetConsoleCursorInfo(hConsole, &cursorInfo);
+    }
+    
+    /**
+     * Updates the current input line for display
+     * @param input Current input string
+     */
+    void updateInputLine(const string& input)
+    {
+        currentInputLine = input;
+        drawInputArea();
     }
     
     /**
@@ -202,7 +357,7 @@ private:
     }
     
     /**
-     * Draws the marquee section at the top of the screen
+     * Draws the marquee section at the top of the screen using ASCII art
      */
     void drawMarqueeSection()
     {
@@ -210,14 +365,40 @@ private:
         setCursorPosition(0, 0);
         cout << "+" << string(consoleWidth - 2, '=') << "+";
         
-        // Draw marquee text
-        setCursorPosition(0, 1);
-        cout << "|";
-        drawMarqueeText();
-        cout << "|";
+        // Draw marquee content using ASCII art
+        if (useASCIIArt && asciiArt) {
+            vector<string> marqueeDisplay = asciiArt->textToASCII(*marqueeText, 
+                                                                 *isAnimating ? marqueePosition : 0);
+            
+            for (int i = 0; i < marqueeDisplay.size() && i < marqueeHeight - 2; i++) {
+                setCursorPosition(0, i + 1);
+                cout << "|";
+                
+                string line = marqueeDisplay[i];
+                if (line.length() > consoleWidth - 2) {
+                    line = line.substr(0, consoleWidth - 2);
+                } else if (line.length() < consoleWidth - 2) {
+                    line += string(consoleWidth - 2 - line.length(), ' ');
+                }
+                
+                cout << line << "|";
+            }
+        } else {
+            // Fallback to simple text if ASCII art failed
+            setCursorPosition(0, 1);
+            cout << "|";
+            drawMarqueeText();
+            cout << "|";
+            
+            // Fill remaining height
+            for (int i = 2; i < marqueeHeight - 1; i++) {
+                setCursorPosition(0, i);
+                cout << "|" << string(consoleWidth - 2, ' ') << "|";
+            }
+        }
         
         // Draw bottom border
-        setCursorPosition(0, 2);
+        setCursorPosition(0, marqueeHeight - 1);
         cout << "+" << string(consoleWidth - 2, '=') << "+";
     }
     
@@ -286,9 +467,11 @@ private:
             cout << "|";
         }
         
-        // Draw text console content
+        // Draw text console content (excluding the input area)
         int startY = marqueeHeight;
-        for (int i = 0; i < textConsoleLines.size() && i < textConsoleHeight - 2; i++)
+        int maxLines = textConsoleHeight - 2; // Leave space for input area
+        
+        for (int i = 0; i < textConsoleLines.size() && i < maxLines; i++)
         {
             setCursorPosition(0, startY + i);
             string line = textConsoleLines[i];
@@ -306,6 +489,39 @@ private:
             {
                 cout << string(textConsoleWidth - 1 - line.length(), ' ');
             }
+        }
+        
+        // Clear any remaining lines before input area
+        for (int i = textConsoleLines.size(); i < maxLines; i++)
+        {
+            setCursorPosition(0, startY + i);
+            cout << string(textConsoleWidth - 1, ' ');
+        }
+    }
+    
+    /**
+     * Draws the input area at the bottom of the text console
+     */
+    void drawInputArea()
+    {
+        setCursorPosition(0, inputAreaY);
+        
+        // Clear the input line
+        cout << string(textConsoleWidth - 1, ' ');
+        
+        // Draw the prompt and current input
+        setCursorPosition(0, inputAreaY);
+        string promptLine = "CSOPESY> " + currentInputLine;
+        
+        if (promptLine.length() > textConsoleWidth - 1) {
+            promptLine = promptLine.substr(0, textConsoleWidth - 1);
+        }
+        
+        cout << promptLine;
+        
+        // Position cursor at end of input for typing
+        if (isInInputMode) {
+            setCursorPosition(promptLine.length(), inputAreaY);
         }
     }
     
@@ -412,10 +628,10 @@ public:
             "|  * Text Console (Left) | GIF Animation (Right)                              |",
             "|                                                                              |",
             "|  Commands:                                                                   |",
-            "|  * marquee <text>     - Set marquee text                                    |",
-            "|  * marquee-start      - Start marquee animation                             |",
-            "|  * marquee-stop       - Stop marquee animation                              |",
-            "|  * marquee-speed <ms> - Set animation speed                                 |",
+            "|  * set_text <text>    - Set marquee text                                    |",
+            "|  * start_marquee      - Start marquee animation                             |",
+            "|  * stop_marquee       - Stop marquee animation                              |",
+            "|  * set_speed <ms>     - Set animation speed                                 |",
             "|  * clear              - Clear console                                       |",
             "|  * exit               - Exit application                                    |",
             "|                                                                              |",

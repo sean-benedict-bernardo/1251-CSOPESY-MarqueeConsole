@@ -84,9 +84,6 @@ private:
             }
         }
 
-        if (!command.empty())
-            cmd.arguments.push_back(command);
-
         return cmd;
     }
 

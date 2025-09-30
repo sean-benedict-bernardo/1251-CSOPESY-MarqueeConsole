@@ -6,7 +6,7 @@
 
 #define NUM_FRAMES 93
 #define NUM_ROWS 20
-#define FRAME_DIR "ascii_frames/"
+#define FRAME_DIR "src/utils/data/ascii_frames/"
 
 using namespace std;
 class Frame
