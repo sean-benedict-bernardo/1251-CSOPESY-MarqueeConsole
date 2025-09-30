@@ -18,12 +18,14 @@ public:
     bool *isRunning;
     bool *isAnimating;
     int *speed;
+    string *marqueeText;
 
-    CommandHandler(bool *isRunning, bool *isAnimating, int *speed)
+    CommandHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText)
     {
         this->isRunning = isRunning;
         this->isAnimating = isAnimating;
         this->speed = speed;
+        this->marqueeText = marqueeText;
     }
 
     vector<string> parseInput(string input)
@@ -43,10 +45,9 @@ private:
     Command parseCommand(string input)
     {
         string command = "";
-        Command cmd = {
-            .command = "",
-            .arguments = {},
-        };
+        Command cmd;
+        cmd.command = "";
+        cmd.arguments = {};
 
         for (int i = 0; i < input.length(); i++)
         {
@@ -107,14 +108,29 @@ private:
         }
         else if (command == "stop_marquee")
             return {this->stopMarquee()};
+        else if (command == "set_text")
+        {
+            if (arguments.size() < 1)
+                return {"Error: set_text requires a text argument."};
+            else
+            {
+                string text = "";
+                for (size_t i = 0; i < arguments.size(); i++)
+                {
+                    if (i > 0) text += " ";
+                    text += arguments[i];
+                }
+                return {this->setText(text)};
+            }
+        }
         else if (command == "set_speed" || command == "speed")
         {
-            if (arguments.size() < 2)
+            if (arguments.size() < 1)
                 return {"Error: set_speed requires an argument."};
             else
                 try
                 {
-                    int speed = stoi(arguments[1]);
+                    int speed = stoi(arguments[0]);
                     return {this->setSpeed(speed)};
                 }
                 catch (const std::exception &e)
@@ -146,6 +162,7 @@ private:
         helpMessages.push_back(" - help               Show this help message");
         helpMessages.push_back(" - start_marquee      Start the marquee animation");
         helpMessages.push_back(" - stop_marquee       Stop the marquee animation");
+        helpMessages.push_back(" - set_text <text>    Set the text to display in the marquee");
         helpMessages.push_back(" - set_speed <value>  Set the speed of the marquee animation");
         helpMessages.push_back(" - clear              Clear the console screen");
         helpMessages.push_back(" - exit               Exit the program");
@@ -185,6 +202,22 @@ private:
         {
             return "Marquee is not running.";
         }
+    }
+
+    /**
+     * Sets the text for the marquee display.
+     * @param text The new text to display.
+     * @return A message indicating the text has been set.
+     */
+    string setText(const string& text)
+    {
+        if (text.empty())
+        {
+            return "Error: Text cannot be empty.";
+        }
+        
+        *this->marqueeText = text;
+        return "Marquee text set to: \"" + text + "\"";
     }
 
     /**
@@ -230,29 +263,5 @@ private:
     }
 };
 
-int main()
-{
-    bool isRunning = true;
-    bool isAnimating = true;
-    int speed = 1;
-
-    CommandHandler parser(&isRunning, &isAnimating, &speed);
-
-    string input;
-    while (isRunning)
-    {
-        cout << "> ";
-        getline(cin, input);
-        vector<string> response = parser.parseInput(input);
-
-        for (int i = 0; i < response.size(); i++)
-        {
-            cout << response[i] << endl;
-        }
-    }
-
-    if (DEBUG)
-        printf("%s, %s, %d\n", (isRunning ? "true" : "false"), (isAnimating ? "true" : "false"), speed);
-
-    return 0;
-}
+// Main function removed - this is now used as a component class
+// The main function is in OSEmulator.cpp
