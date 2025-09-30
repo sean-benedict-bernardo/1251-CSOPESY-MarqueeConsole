@@ -8,11 +8,6 @@
 #define NUM_ROWS 20
 #define FRAME_DIR "ascii_frames/"
 
-void clearScreen()
-{
-    system("cls");
-}
-
 using namespace std;
 class Frame
 {
