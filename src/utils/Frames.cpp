@@ -8,29 +8,28 @@
 #define NUM_ROWS 20
 #define FRAME_DIR "src/utils/data/ascii_frames/"
 
-using namespace std;
 class Frame
 {
 private:
-    string fileName;
+    std::string fileName;
     int frameNumber;
 
-    vector<string> frameData;
+    std::vector<std::string> frameData;
 
     void encodeFrame()
     {
         // open file
-        string fullDirectory = FRAME_DIR + fileName;
-        ifstream inFile(fullDirectory);
+        std::string fullDirectory = FRAME_DIR + fileName;
+        std::ifstream inFile(fullDirectory);
         if (!inFile)
         {
-            throw runtime_error("File not found: " + fullDirectory);
+            throw std::runtime_error("File not found: " + fullDirectory);
         }
 
         // Read frame data
-        string line;
+        std::string line;
         int row = 0;
-        while (getline(inFile, line) && row < NUM_ROWS)
+        while (std::getline(inFile, line) && row < NUM_ROWS)
         {
             this->frameData.push_back(line);
             ++row;
@@ -42,7 +41,7 @@ private:
 public:
     Frame() {}
 
-    Frame(string fileName, int frameNumber)
+    Frame(std::string fileName, int frameNumber)
     {
         this->fileName = fileName;
         this->frameNumber = frameNumber;
@@ -50,7 +49,7 @@ public:
         this->encodeFrame();
     }
 
-    vector<string> getFrameRows()
+    std::vector<std::string> getFrameRows()
     {
         return this->frameData;
     }
@@ -74,12 +73,12 @@ public:
         {
             char filenameC[100];
             sprintf(filenameC, "frame_%02d.txt", i + 1);
-            string filename = filenameC;
+            std::string filename = filenameC;
             frames[i] = Frame(filename, i + 1);
         }
     }
 
-    vector<string> getFrame(int index)
+    std::vector<std::string> getFrame(int index)
     {
         try
         {
@@ -88,7 +87,7 @@ public:
         catch (const std::exception &e)
         {
             if (index < 0 || index >= numFrames)
-                throw runtime_error("Frame index out of bounds: " + to_string(index));
+                throw std::runtime_error("Frame index out of bounds: " + std::to_string(index));
 
             return {e.what()};
         }

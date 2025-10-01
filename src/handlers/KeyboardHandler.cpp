@@ -6,15 +6,13 @@
 #include <windows.h>
 #include <functional>
 
-using namespace std;
-
 class KeyboardHandler
 {
 private:
     // Keyboard buffer for input management
-    queue<char> keyBuffer;
-    string currentInput;
-    vector<string> commandHistory;
+    std::queue<char> keyBuffer;
+    std::string currentInput;
+    std::vector<std::string> commandHistory;
     int historyIndex;
     int cursorPos;
     bool capsLock;
@@ -22,15 +20,15 @@ private:
     // Console handle for cursor manipulation
     HANDLE hConsole;
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    
+
     // OS emulator state pointers
     bool *isRunning;
     bool *isAnimating;
     int *speed;
-    string *marqueeText;
+    std::string *marqueeText;
     
     // Producer-Consumer callback function
-    function<void(const string&)> commandCallback;
+    std::function<void(const std::string&)> commandCallback;
     
 public:
     /**
@@ -40,7 +38,7 @@ public:
      * @param speed Pointer to the marquee speed
      * @param marqueeText Pointer to the marquee text
      */
-    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText)
+    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, std::string *marqueeText)
     {
         this->isRunning = isRunning;
         this->isAnimating = isAnimating;
@@ -96,14 +94,14 @@ public:
      * Gets the current input line for display purposes
      * @return Current input string with cursor indicator
      */
-    string getCurrentInputLine()
+    std::string getCurrentInputLine()
     {
-        string line = "> " + currentInput;
+        std::string line = "> " + currentInput;
         
         // Add cursor indicator for display
         if (cursorPos <= currentInput.length())
         {
-            string displayLine = "> ";
+            std::string displayLine = "> ";
             displayLine += currentInput.substr(0, cursorPos);
             displayLine += "_";  // Cursor indicator
             displayLine += currentInput.substr(cursorPos);
@@ -127,7 +125,7 @@ public:
      * Gets command history for debugging/display purposes
      * @return Vector of previous commands
      */
-    vector<string> getCommandHistory() const
+    std::vector<std::string> getCommandHistory() const
     {
         return commandHistory;
     }
@@ -155,16 +153,21 @@ public:
         SetConsoleCursorPosition(hConsole, lineStart);
         
         // Clear the line
-        string clearLine(csbi.dwSize.X, ' ');
-        cout << clearLine;
+        std::string clearLine(csbi.dwSize.X, ' ');
+        std::cout << clearLine;
         
         // Reset to line start and print current input
         SetConsoleCursorPosition(hConsole, lineStart);
-        cout << "> " << currentInput;
+        std::cout << "> " << currentInput;
         
         // Position cursor correctly
         COORD cursorPosition = {static_cast<SHORT>(2 + cursorPos), csbi.dwCursorPosition.Y};
         SetConsoleCursorPosition(hConsole, cursorPosition);
+    }
+
+    void connectHandler(std::function<void(const std::string&)> callbackFunction)
+    {
+        commandCallback = std::move(callbackFunction);
     }
 
 private:
@@ -269,7 +272,7 @@ private:
      */
     void handleEnter()
     {
-        string command = currentInput;
+        std::string command = currentInput;
         
         // Add to command history if not empty and different from last command
         if (!command.empty())
@@ -296,7 +299,7 @@ private:
         clearInput();
         
         // Move to next line
-        cout << endl;
+        std::cout << std::endl;
     }
     
     /**
@@ -326,13 +329,13 @@ private:
      */
     void handleTab()
     {
-        vector<string> commands = {
+        std::vector<std::string> commands = {
             "help", "start_marquee", "stop_marquee", 
             "set_text", "set_speed", "clear", "cls", "exit"
         };
         
-        vector<string> matches;
-        for (const string& cmd : commands)
+        std::vector<std::string> matches;
+        for (const std::string& cmd : commands)
         {
             if (cmd.length() >= currentInput.length() && 
                 cmd.substr(0, currentInput.length()) == currentInput)
@@ -350,13 +353,13 @@ private:
         else if (matches.size() > 1)
         {
             // Show available matches
-            cout << endl << "Available completions: ";
+            std::cout << std::endl << "Available completions: ";
             for (size_t i = 0; i < matches.size(); i++)
             {
-                cout << matches[i];
-                if (i < matches.size() - 1) cout << ", ";
+                std::cout << matches[i];
+                if (i < matches.size() - 1) std::cout << ", ";
             }
-            cout << endl;
+            std::cout << std::endl;
             refreshInputDisplay();
         }
     }
@@ -366,9 +369,9 @@ private:
      */
     void handleCtrlC()
     {
-        cout << "^C" << endl;
+        std::cout << "^C" << std::endl;
         clearInput();
-        cout << "> ";
+        std::cout << "> ";
     }
     
     /**
@@ -376,9 +379,9 @@ private:
      */
     void handleCtrlZ()
     {
-        cout << "^Z" << endl;
+        std::cout << "^Z" << std::endl;
         clearInput();
-        cout << "> ";
+        std::cout << "> ";
     }
     
     /**
@@ -467,19 +470,15 @@ private:
      * Gets system information for debugging
      * @return String with current keyboard handler state
      */
-    string getSystemInfo()
+    std::string getSystemInfo()
     {
-        string info = "Keyboard Handler Status:\n";
-        info += " - Buffer size: " + to_string(keyBuffer.size()) + "\n";
+        std::string info = "Keyboard Handler Status:\n";
+        info += " - Buffer size: " + std::to_string(keyBuffer.size()) + "\n";
         info += " - Current input: '" + currentInput + "'\n";
-        info += " - Cursor position: " + to_string(cursorPos) + "\n";
-        info += " - History size: " + to_string(commandHistory.size()) + "\n";
-        info += " - History index: " + to_string(historyIndex) + "\n";
+        info += " - Cursor position: " + std::to_string(cursorPos) + "\n";
+        info += " - History size: " + std::to_string(commandHistory.size()) + "\n";
+        info += " - History index: " + std::to_string(historyIndex) + "\n";
         return info;
     }
 
-    void connectHandler(function<void(const string&)> callbackFunction)
-    {
-        commandCallback = std::move(callbackFunction);
-    }
 };

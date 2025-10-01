@@ -7,12 +7,10 @@
 
 #define DEBUG true
 
-using namespace std;
-
 typedef struct CommandStruct
 {
-    string command;
-    vector<string> arguments;
+    std::string command;
+    std::vector<std::string> arguments;
 } Command;
 
 class CommandHandler
@@ -21,9 +19,9 @@ public:
     bool *isRunning;
     bool *isAnimating;
     int *speed;
-    string *marqueeText;
+    std::string *marqueeText;
 
-    CommandHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText)
+    CommandHandler(bool *isRunning, bool *isAnimating, int *speed, std::string *marqueeText)
     {
         this->isRunning = isRunning;
         this->isAnimating = isAnimating;
@@ -36,9 +34,9 @@ public:
      * This function is called by the KeyboardHandler via callback
      * @param commandString The command string to be queued for processing
      */
-    void enqueueCommand(const string& commandString)
+    void enqueueCommand(const std::string& commandString)
     {
-        lock_guard<mutex> lock(queueMutex);
+        std::lock_guard<std::mutex> lock(queueMutex);
         commandQueue.push(commandString);
     }
 
@@ -46,16 +44,16 @@ public:
      * Processes the next command in the queue (Consumer function)
      * @return Vector of response messages, empty if no commands in queue
      */
-    vector<string> processNextCommand()
+    std::vector<std::string> processNextCommand()
     {
-        lock_guard<mutex> lock(queueMutex);
+        std::lock_guard<std::mutex> lock(queueMutex);
         
         if (commandQueue.empty())
         {
             return {}; // No commands to process
         }
         
-        string commandString = commandQueue.front();
+        std::string commandString = commandQueue.front();
         commandQueue.pop();
         
         // Parse and execute the command
@@ -68,7 +66,7 @@ public:
      */
     bool hasCommandsInQueue()
     {
-        lock_guard<mutex> lock(queueMutex);
+        std::lock_guard<std::mutex> lock(queueMutex);
         return !commandQueue.empty();
     }
 
@@ -76,9 +74,9 @@ public:
      * Gets the current queue size for debugging purposes
      * @return Number of commands currently in the queue
      */
-    size_t getQueueSize()
+    std::size_t getQueueSize()
     {
-        lock_guard<mutex> lock(queueMutex);
+        std::lock_guard<std::mutex> lock(queueMutex);
         return commandQueue.size();
     }
 
@@ -87,34 +85,34 @@ public:
      * to enqueue commands. This enables the producer-consumer pattern.
      * @return Function object that can be called to enqueue commands
      */
-    function<void(const string&)> getEnqueueCallback()
+    std::function<void(const std::string&)> getEnqueueCallback()
     {
-        return [this](const string& command) {
+        return [this](const std::string& command) {
             this->enqueueCommand(command);
         };
     }
 
-    vector<string> parseInput(string input)
+    std::vector<std::string> parseInput(std::string input)
     {
         Command cmd = parseCommand(input);
-        vector<string> display = commandController(cmd.command, cmd.arguments);
+        std::vector<std::string> display = commandController(cmd.command, cmd.arguments);
 
         return display;
     }
 
 private:
     // Producer-Consumer pattern components
-    queue<string> commandQueue;  // Queue to store commands from KeyboardHandler
-    mutex queueMutex;           // Mutex for thread-safe queue operations
+    std::queue<std::string> commandQueue;  // Queue to store commands from KeyboardHandler
+    std::mutex queueMutex;           // Mutex for thread-safe queue operations
     
     /**
      * Splits the input string into a vector of arguments based on spaces.
      * @param input The input string to split.
      * @return A vector of arguments.
      */
-    Command parseCommand(string input)
+    Command parseCommand(std::string input)
     {
-        string command = "";
+        std::string command = "";
         Command cmd;
         cmd.command = "";
         cmd.arguments = {};
@@ -163,7 +161,7 @@ private:
      * @param arguments The arguments associated with the command.
      * @return vector of response messages. see indivudal functions for actual return types.
      */
-    vector<string> commandController(string command, const vector<string> &arguments = {})
+    std::vector<std::string> commandController(std::string command, const std::vector<std::string> &arguments = {})
     {
         if (command == "")
             return {""};
@@ -181,8 +179,8 @@ private:
                 return {"Error: set_text requires a text argument."};
             else
             {
-                string text = "";
-                for (size_t i = 0; i < arguments.size(); i++)
+                std::string text = "";
+                for (std::size_t i = 0; i < arguments.size(); i++)
                 {
                     if (i > 0) text += " ";
                     text += arguments[i];
@@ -197,7 +195,7 @@ private:
             else
                 try
                 {
-                    int speed = stoi(arguments[0]);
+                    int speed = std::stoi(arguments[0]);
                     return {this->setSpeed(speed)};
                 }
                 catch (const std::exception &e)
@@ -222,9 +220,9 @@ private:
      * Returns a list of available commands and their descriptions.
      * @return vector of help messages.
      */
-    vector<string> getHelp()
+    std::vector<std::string> getHelp()
     {
-        vector<string> helpMessages;
+        std::vector<std::string> helpMessages;
         helpMessages.push_back("Available commands:");
         helpMessages.push_back(" - help               Show this help message");
         helpMessages.push_back(" - start_marquee      Start the marquee animation");
@@ -241,7 +239,7 @@ private:
      * Starts the marquee animation by setting isAnimating to true.
      * @return message indicating the marquee has been started or was already running.
      */
-    string startMarquee()
+    std::string startMarquee()
     {
         if (!*this->isAnimating)
         {
@@ -258,7 +256,7 @@ private:
      * Stops the marquee animation by setting isAnimating to false.
      * @return message indicating the marquee has been stopped or was not running.
      */
-    string stopMarquee()
+    std::string stopMarquee()
     {
         if (*this->isAnimating)
         {
@@ -276,7 +274,7 @@ private:
      * @param text The new text to display.
      * @return A message indicating the text has been set.
      */
-    string setText(const string& text)
+    std::string setText(const std::string& text)
     {
         if (text.empty())
         {
@@ -292,22 +290,22 @@ private:
      * @param speed The new speed value.
      * @return A message indicating the new speed.
      */
-    string setSpeed(int speed)
+    std::string setSpeed(int speed)
     {
         // Implementation to set speed
         if (speed == *this->speed)
-            return "Marquee speed is already set to " + to_string(speed) + ".";
+            return "Marquee speed is already set to " + std::to_string(speed) + ".";
 
         *this->speed = speed;
-        return "Marquee speed set to " + to_string(speed) + ".";
+        return "Marquee speed set to " + std::to_string(speed) + ".";
     }
 
-    string status()
+    std::string status()
     {
-        string statusMessage;
-        statusMessage += "isRunning: " + string(*this->isRunning ? "true" : "false") + ", ";
-        statusMessage += "isAnimating: " + string(*this->isAnimating ? "true" : "false") + ", ";
-        statusMessage += "speed: " + to_string(*this->speed);
+        std::string statusMessage;
+        statusMessage += "isRunning: " + std::string(*this->isRunning ? "true" : "false") + ", ";
+        statusMessage += "isAnimating: " + std::string(*this->isAnimating ? "true" : "false") + ", ";
+        statusMessage += "speed: " + std::to_string(*this->speed);
         return statusMessage;
     }
 
@@ -315,7 +313,7 @@ private:
      * Exits the program by setting isRunning to false.
      * @return A message indicating the program is exiting.
      */
-    string exitProgram()
+    std::string exitProgram()
     {
         *this->isRunning = false;
         return "Exiting program.";

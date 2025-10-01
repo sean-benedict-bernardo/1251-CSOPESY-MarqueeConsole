@@ -2,25 +2,23 @@
 #include <string>
 #include <iostream>
 
-using namespace std;
-
 class CommandHistory
 {
 private:
-    vector<string> history;
+    std::vector<std::string> history;
     int rowHeight;
 
 public:
     CommandHistory(int rowHeight = 50) : rowHeight(rowHeight) {}
 
-    void addCommand(const string &command)
+    void addCommand(const std::string &command)
     {
         if (history.size() >= rowHeight)
             history.erase(history.begin());
         history.push_back(command);
     }
 
-    vector<string> getHistory() const
+    std::vector<std::string> getHistory() const
     {
         return history;
     }

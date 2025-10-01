@@ -5,8 +5,6 @@
 #include <mutex>
 #include <chrono>
 
-using namespace std;
-
 /**
  * MarqueeLogicHandler - Handles marquee text animation and ASCII art rendering
  * Converted from marquee_logic.c and enhanced with Handler architecture
@@ -15,7 +13,7 @@ class MarqueeLogicHandler
 {
 private:
     // Text and animation state
-    string currentText;
+    std::string currentText;
     int scrollPosition;
     int animationSpeed;  // milliseconds between updates
     
@@ -26,13 +24,13 @@ private:
     // Display properties
     int displayWidth;
     int displayHeight;
-    vector<vector<char>> displayBuffer;  // 2D character buffer
+    std::vector<std::vector<char>> displayBuffer;  // 2D character buffer
     
     // Animation timing
-    chrono::steady_clock::time_point lastUpdate;
+    std::chrono::steady_clock::time_point lastUpdate;
     
     // Thread safety
-    mutable mutex textMutex;
+    mutable std::mutex textMutex;
     
     // State flags
     bool needsUpdate;
@@ -49,8 +47,11 @@ public:
         currentText = "";
         scrollPosition = 0;
         animationSpeed = 100;  // 100ms default
-        displayWidth = width;
-        displayHeight = height;
+        
+        // Validate and set dimensions with bounds checking
+        displayWidth = std::max(1, std::min(width, 1000));   // Between 1 and 1000
+        displayHeight = std::max(1, std::min(height, 100));  // Between 1 and 100
+        
         useAsciiArt = false;
         needsUpdate = false;
         isScrolling = false;
@@ -61,7 +62,7 @@ public:
         // Initialize display buffer
         initializeDisplayBuffer();
         
-        lastUpdate = chrono::steady_clock::now();
+        lastUpdate = std::chrono::steady_clock::now();
     }
     
     /**
@@ -75,7 +76,6 @@ public:
         }
     }
 
-protected:
     /**
      * Initialize the marquee handler
      */
@@ -102,11 +102,11 @@ protected:
      */
     void process()
     {
-        auto now = chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
         
         // Check if it's time to update animation
         if (isScrolling && 
-            chrono::duration_cast<chrono::milliseconds>(now - lastUpdate).count() >= animationSpeed)
+            std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate).count() >= animationSpeed)
         {
             {
                 std::lock_guard<std::mutex> lock(textMutex);
@@ -140,13 +140,12 @@ protected:
         clearDisplayBuffer();
     }
 
-public:
     /**
      * Handle input method required by base Handler class
      */
-    vector<string> handleInput(const string& input)
+    std::vector<std::string> handleInput(const std::string& input)
     {
-        vector<string> response;
+        std::vector<std::string> response;
         response.push_back("MarqueeLogicHandler processes marquee text and animations");
         return response;
     }
@@ -154,7 +153,7 @@ public:
     /**
      * Get handler type
      */
-    string getHandlerType() const
+    std::string getHandlerType() const
     {
         return "MarqueeLogicHandler";
     }
@@ -163,7 +162,7 @@ public:
      * Set the marquee text
      * @param text New text to display
      */
-    void setText(const string& text)
+    void setText(const std::string& text)
     {
         std::lock_guard<std::mutex> lock(textMutex);
         currentText = text;
@@ -175,7 +174,7 @@ public:
      * Get the current marquee text
      * @return Current text being displayed
      */
-    string getText() const
+    std::string getText() const
     {
         std::lock_guard<std::mutex> lock(textMutex);
         return currentText;
@@ -188,7 +187,7 @@ public:
     void setAnimationSpeed(int speed)
     {
         std::lock_guard<std::mutex> lock(textMutex);
-        animationSpeed = max(10, speed);  // Minimum 10ms
+        animationSpeed = std::max(10, speed);  // Minimum 10ms
     }
     
     /**
@@ -235,14 +234,14 @@ public:
      * Get the current display as vector of strings
      * @return Vector of strings representing the current marquee display
      */
-    vector<string> getCurrentDisplay()
+    std::vector<std::string> getCurrentDisplay()
     {
         std::lock_guard<std::mutex> lock(textMutex);
         
-        vector<string> display;
+        std::vector<std::string> display;
         for (int row = 0; row < displayHeight; row++)
         {
-            string line;
+            std::string line;
             for (int col = 0; col < displayWidth; col++)
             {
                 line += displayBuffer[row][col];
@@ -257,9 +256,9 @@ public:
      * Get a single line of the current display (for simple marquee)
      * @return Single string with the current marquee line
      */
-    string getCurrentLine()
+    std::string getCurrentLine()
     {
-        vector<string> display = getCurrentDisplay();
+        std::vector<std::string> display = getCurrentDisplay();
         if (!display.empty())
         {
             // Return the middle line for single-line marquee
@@ -278,12 +277,29 @@ private:
      */
     void initializeDisplayBuffer()
     {
-        displayBuffer.clear();
-        displayBuffer.resize(displayHeight);
+        // Safety check for valid dimensions
+        if (displayHeight <= 0 || displayWidth <= 0 || 
+            displayHeight > 100 || displayWidth > 1000) {
+            // Use safe default values
+            displayHeight = 6;
+            displayWidth = 80;
+        }
         
-        for (int row = 0; row < displayHeight; row++)
-        {
-            displayBuffer[row].resize(displayWidth, ' ');
+        displayBuffer.clear();
+        try {
+            displayBuffer.resize(displayHeight);
+            
+            for (int row = 0; row < displayHeight; row++)
+            {
+                displayBuffer[row].resize(displayWidth, ' ');
+            }
+        } catch (const std::exception& e) {
+            // If resize fails, create minimal buffer
+            displayBuffer.clear();
+            displayBuffer.resize(1);
+            displayBuffer[0].resize(1, ' ');
+            displayHeight = 1;
+            displayWidth = 1;
         }
     }
     
@@ -333,7 +349,7 @@ private:
         int extendedLength = textLength + displayWidth;
         
         // Determine which characters are visible
-        vector<char> visibleChars;
+        std::vector<char> visibleChars;
         for (int i = 0; i < displayWidth; i++)
         {
             int textIndex = (scrollPosition + i) % extendedLength;
@@ -356,13 +372,13 @@ private:
             char c = visibleChars[charIndex];
             if (c != ' ' && fileReader->hasArt(c))
             {
-                vector<string> art = fileReader->lookupArt(c);
+                std::vector<std::string> art = fileReader->lookupArt(c);
                 
                 // Place ASCII art in display buffer
-                for (int row = 0; row < min((int)art.size(), displayHeight); row++)
+                for (int row = 0; row < std::min((int)art.size(), displayHeight); row++)
                 {
                     int startCol = charIndex * charWidth;
-                    for (int col = 0; col < min((int)art[row].length(), charWidth); col++)
+                    for (int col = 0; col < std::min((int)art[row].length(), charWidth); col++)
                     {
                         if (startCol + col < displayWidth)
                         {
@@ -405,7 +421,7 @@ private:
      * @param row Pointer to row array
      * @param cols Number of columns
      */
-    void rotateLeft(vector<char>& row)
+    void rotateLeft(std::vector<char>& row)
     {
         if (row.size() <= 1) return;
         
@@ -432,22 +448,22 @@ private:
     /**
      * Get status information for debugging
      */
-    string getStatusInfo() const
+    std::string getStatusInfo() const
     {
         std::lock_guard<std::mutex> lock(textMutex);
         
-        string info = "MarqueeLogicHandler Status:\n";
+        std::string info = "MarqueeLogicHandler Status:\n";
         info += " - Text: \"" + currentText + "\"\n";
-        info += " - Scroll Position: " + to_string(scrollPosition) + "\n";
-        info += " - Animation Speed: " + to_string(animationSpeed) + "ms\n";
-        info += " - Is Scrolling: " + string(isScrolling ? "Yes" : "No") + "\n";
-        info += " - ASCII Art Mode: " + string(useAsciiArt ? "Enabled" : "Disabled") + "\n";
-        info += " - Display Size: " + to_string(displayWidth) + "x" + to_string(displayHeight) + "\n";
+        info += " - Scroll Position: " + std::to_string(scrollPosition) + "\n";
+        info += " - Animation Speed: " + std::to_string(animationSpeed) + "ms\n";
+        info += " - Is Scrolling: " + std::string(isScrolling ? "Yes" : "No") + "\n";
+        info += " - ASCII Art Mode: " + std::string(useAsciiArt ? "Enabled" : "Disabled") + "\n";
+        info += " - Display Size: " + std::to_string(displayWidth) + "x" + std::to_string(displayHeight) + "\n";
         
         if (fileReader)
         {
-            vector<char> loadedKeys = fileReader->getLoadedKeys();
-            info += " - Loaded ASCII Characters: " + to_string(loadedKeys.size()) + "\n";
+            std::vector<char> loadedKeys = fileReader->getLoadedKeys();
+            info += " - Loaded ASCII Characters: " + std::to_string(loadedKeys.size()) + "\n";
         }
         
         return info;
