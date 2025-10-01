@@ -2,8 +2,7 @@ import pyfiglet
 
 DIRECTORY = "characters/"
 
-texts = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-# texts = list("ABC")
+texts = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.!?")
 
 
 def make_ascii_art(text: str) -> str:
