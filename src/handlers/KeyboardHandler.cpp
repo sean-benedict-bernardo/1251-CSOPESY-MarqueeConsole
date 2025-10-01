@@ -39,15 +39,13 @@ public:
      * @param isAnimating Pointer to the animation state
      * @param speed Pointer to the marquee speed
      * @param marqueeText Pointer to the marquee text
-     * @param callback Callback function to enqueue commands (from CommandHandler)
      */
-    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText, function<void(const string&)> callback)
+    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText)
     {
         this->isRunning = isRunning;
         this->isAnimating = isAnimating;
         this->speed = speed;
         this->marqueeText = marqueeText;
-        this->commandCallback = callback;
         this->currentInput = "";
         this->historyIndex = -1;
         this->cursorPos = 0;
@@ -478,5 +476,10 @@ private:
         info += " - History size: " + to_string(commandHistory.size()) + "\n";
         info += " - History index: " + to_string(historyIndex) + "\n";
         return info;
+    }
+
+    void connectHandler(function<void(const string&)> callbackFunction)
+    {
+        commandCallback = std::move(callbackFunction);
     }
 };
