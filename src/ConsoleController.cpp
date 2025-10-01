@@ -18,7 +18,6 @@ private:
     // GIF animation variables
     std::vector<std::vector<std::string>> gifFrames;
     int currentGifFrame;
-    int gifSpeed; // milliseconds between frames
     bool isGifAnimating;
     
     // Handler instances
@@ -32,8 +31,12 @@ public:
         // Initialize shared state
         isRunning = true;
         isAnimating = true;
-        speed = 100; // Default marquee speed in milliseconds
+        speed = 100; // Default animation speed in milliseconds (used for both marquee and GIF)
         marqueeText = "Welcome to CSOPESY Marquee Console!";
+        
+        // Initialize GIF animation variables
+        currentGifFrame = 0;
+        isGifAnimating = true;
         
         // Initialize handlers with shared state pointers
         commandHandler = new CommandHandler(&isRunning, &isAnimating, &speed, &marqueeText);
@@ -43,6 +46,39 @@ public:
         
         // Connect the handlers through callbacks
         connectHandlers();
+        
+        // Load GIF frames from data folder
+        loadGifFrames();
+    }
+    
+    void loadGifFrames() {
+        const std::string framesPath = "utils/data/ascii_frames/";
+        
+        // Load frames frame_01.txt through frame_93.txt
+        for (int i = 1; i <= 93; i++) {
+            std::string filename = framesPath + "frame_" + std::string(2 - std::to_string(i).length(), '0') + std::to_string(i) + ".txt";
+            std::ifstream file(filename);
+            
+            if (file.is_open()) {
+                std::vector<std::string> frame;
+                std::string line;
+                
+                while (std::getline(file, line)) {
+                    frame.push_back(line);
+                }
+                
+                if (!frame.empty()) {
+                    gifFrames.push_back(frame);
+                }
+                
+                file.close();
+            }
+        }
+        
+        // If frames loaded successfully, start the GIF
+        if (!gifFrames.empty() && displayHandler) {
+            displayHandler->updateGifFrame(gifFrames[0]);
+        }
     }
     
     ~ConsoleController() {
@@ -77,6 +113,7 @@ public:
         
         bool needsDisplayUpdate = false;
         auto lastMarqueeUpdate = std::chrono::steady_clock::now();
+        auto lastGifUpdate = std::chrono::steady_clock::now();
         int marqueePosition = 0;
         
         // Main application loop
@@ -102,6 +139,19 @@ public:
                     marqueePosition++;
                     displayHandler->updateMarqueePosition(marqueePosition);
                     lastMarqueeUpdate = now;
+                    needsDisplayUpdate = true;
+                }
+            }
+            
+            // Update GIF animation if enabled and frames are loaded (throttled)
+            if (isGifAnimating && !gifFrames.empty()) {
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastGifUpdate);
+                
+                if (elapsed.count() >= speed) {
+                    currentGifFrame = (currentGifFrame + 1) % gifFrames.size();
+                    displayHandler->updateGifFrame(gifFrames[currentGifFrame]);
+                    lastGifUpdate = now;
                     needsDisplayUpdate = true;
                 }
             }
