@@ -344,23 +344,16 @@ private:
      */
     void renderAsciiArt()
     {
-        // Calculate visible characters based on scroll position
-        int textLength = currentText.length();
-        int extendedLength = textLength + displayWidth;
+        // Create a continuous text loop with minimal padding
+        std::string scrollText = currentText + "   "; // Only 3 spaces padding
+        int totalLength = scrollText.length();
         
-        // Determine which characters are visible
+        // Calculate which characters are visible
         std::vector<char> visibleChars;
         for (int i = 0; i < displayWidth; i++)
         {
-            int textIndex = (scrollPosition + i) % extendedLength;
-            if (textIndex < textLength)
-            {
-                visibleChars.push_back(currentText[textIndex]);
-            }
-            else
-            {
-                visibleChars.push_back(' ');  // Padding space
-            }
+            int textIndex = (scrollPosition + i) % totalLength;
+            visibleChars.push_back(scrollText[textIndex]);
         }
         
         // Render each character using ASCII art
@@ -374,7 +367,7 @@ private:
             {
                 std::vector<std::string> art = fileReader->lookupArt(c);
                 
-                // Place ASCII art in display buffer
+                // Place ASCII art in display buffer starting from top (row 0)
                 for (int row = 0; row < std::min((int)art.size(), displayHeight); row++)
                 {
                     int startCol = charIndex * charWidth;
@@ -391,27 +384,21 @@ private:
     }
     
     /**
-     * Render text as plain characters (fallback mode)
+     * Render text as plain characters (fallback mode) - FIXED VERSION
      */
     void renderPlainText()
     {
-        // Use middle row for single-line text
-        int textRow = displayHeight / 2;
+        // Create a continuous text loop with minimal padding
+        std::string scrollText = currentText + "   "; // Only 3 spaces padding
+        int totalLength = scrollText.length();
         
-        // Calculate visible portion of text
-        int textLength = currentText.length();
-        int extendedLength = textLength + displayWidth;
-        
-        for (int col = 0; col < displayWidth; col++)
+        // Fill all rows with the scrolling text (not just middle row)
+        for (int row = 0; row < displayHeight; row++)
         {
-            int textIndex = (scrollPosition + col) % extendedLength;
-            if (textIndex < textLength)
+            for (int col = 0; col < displayWidth; col++)
             {
-                displayBuffer[textRow][col] = currentText[textIndex];
-            }
-            else
-            {
-                displayBuffer[textRow][col] = ' ';  // Padding space
+                int textIndex = (scrollPosition + col) % totalLength;
+                displayBuffer[row][col] = scrollText[textIndex];
             }
         }
     }

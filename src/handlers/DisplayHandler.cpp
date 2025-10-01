@@ -129,6 +129,7 @@ private:
     std::vector<std::string> currentGifFrame;
     std::vector<std::string> textConsoleLines;
     std::string currentMarqueeText;
+    std::vector<std::string> currentMarqueeDisplay;
     int marqueePosition;
     
     // Marquee ASCII art handler
@@ -296,6 +297,15 @@ public:
     }
     
     /**
+     * Updates the marquee display with data from MarqueeLogicHandler
+     * @param marqueeLines Vector of strings representing the current marquee display
+     */
+    void updateMarqueeDisplay(const std::vector<std::string>& marqueeLines)
+    {
+        currentMarqueeDisplay = marqueeLines;
+    }
+    
+    /**
      * Displays the current prompt in the text console
      */
     void displayPrompt()
@@ -374,7 +384,7 @@ private:
     }
     
     /**
-     * Draws the marquee section at the top of the screen using ASCII art
+     * Draws the marquee section at the top of the screen using data from MarqueeLogicHandler
      */
     void drawMarqueeSection()
     {
@@ -382,16 +392,13 @@ private:
         setCursorPosition(0, 0);
         std::cout << "+" << std::string(consoleWidth - 2, '=') << "+";
         
-        // Draw marquee content using ASCII art
-        if (useASCIIArt && asciiArt) {
-            std::vector<std::string> marqueeDisplay = asciiArt->textToASCII(*marqueeText, 
-                                                                 *isAnimating ? marqueePosition : 0);
-            
-            for (int i = 0; i < marqueeDisplay.size() && i < marqueeHeight - 2; i++) {
+        // Draw marquee content from MarqueeLogicHandler
+        if (!currentMarqueeDisplay.empty()) {
+            for (int i = 0; i < currentMarqueeDisplay.size() && i < marqueeHeight - 2; i++) {
                 setCursorPosition(0, i + 1);
                 std::cout << "|";
 
-                std::string line = marqueeDisplay[i];
+                std::string line = currentMarqueeDisplay[i];
                 if (line.length() > consoleWidth - 2) {
                     line = line.substr(0, consoleWidth - 2);
                 } else if (line.length() < consoleWidth - 2) {
@@ -399,15 +406,15 @@ private:
                 }
                 std::cout << line << "|";
             }
-        } else {
-            // Fallback to simple text if ASCII art failed
-            setCursorPosition(0, 1);
-            std::cout << "|";
-            drawMarqueeText();
-            std::cout << "|";
             
-            // Fill remaining height
-            for (int i = 2; i < marqueeHeight - 1; i++) {
+            // Fill remaining height if marquee display has fewer lines than available space
+            for (int i = currentMarqueeDisplay.size(); i < marqueeHeight - 2; i++) {
+                setCursorPosition(0, i + 1);
+                std::cout << "|" << std::string(consoleWidth - 2, ' ') << "|";
+            }
+        } else {
+            // Show empty marquee if no display data available
+            for (int i = 1; i < marqueeHeight - 1; i++) {
                 setCursorPosition(0, i);
                 std::cout << "|" << std::string(consoleWidth - 2, ' ') << "|";
             }

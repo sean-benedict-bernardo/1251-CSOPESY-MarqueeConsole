@@ -100,11 +100,21 @@ public:
         keyboardHandler->connectInputDisplay([this](const std::string& currentInput) {
             displayHandler->updateInputLine(currentInput);
         });
+
+        // Connect CommandHandler to MarqueeLogicHandler for text changes
+        commandHandler->connectMarqueeTextChange([this](const std::string& newText) {
+            marqueeLogicHandler->setText(newText);
+        });
         
-        // Set up the marquee logic handler with initial text
+        // Set up the marquee logic handler with initial text and speed
         marqueeLogicHandler->setText(marqueeText);
+        marqueeLogicHandler->setAnimationSpeed(speed);
         marqueeLogicHandler->initialize();
         marqueeLogicHandler->startScrolling();
+        
+        // Get initial marquee display and send to DisplayHandler
+        std::vector<std::string> initialMarqueeDisplay = marqueeLogicHandler->getCurrentDisplay();
+        displayHandler->updateMarqueeDisplay(initialMarqueeDisplay);
     }
     
     void start() {
@@ -136,8 +146,14 @@ public:
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastMarqueeUpdate);
                 
                 if (elapsed.count() >= speed) {
-                    marqueePosition++;
-                    displayHandler->updateMarqueePosition(marqueePosition);
+                    // Update MarqueeLogicHandler's animation speed and process
+                    marqueeLogicHandler->setAnimationSpeed(speed);
+                    marqueeLogicHandler->process();
+                    
+                    // Get the current display from MarqueeLogicHandler and send to DisplayHandler
+                    std::vector<std::string> marqueeDisplay = marqueeLogicHandler->getCurrentDisplay();
+                    displayHandler->updateMarqueeDisplay(marqueeDisplay);
+                    
                     lastMarqueeUpdate = now;
                     needsDisplayUpdate = true;
                 }

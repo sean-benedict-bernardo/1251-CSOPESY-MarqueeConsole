@@ -92,6 +92,15 @@ public:
         };
     }
 
+    /**
+     * Connects a callback that will be called when marquee text changes
+     * @param callback Function to call when text changes
+     */
+    void connectMarqueeTextChange(std::function<void(const std::string&)> callback)
+    {
+        marqueeTextChangeCallback = callback;
+    }
+
     std::vector<std::string> parseInput(std::string input)
     {
         Command cmd = parseCommand(input);
@@ -104,6 +113,9 @@ private:
     // Producer-Consumer pattern components
     std::queue<std::string> commandQueue;  // Queue to store commands from KeyboardHandler
     std::mutex queueMutex;           // Mutex for thread-safe queue operations
+    
+    // Callback for marquee text changes
+    std::function<void(const std::string&)> marqueeTextChangeCallback;
     
     /**
      * Splits the input string into a vector of arguments based on spaces.
@@ -281,6 +293,12 @@ private:
         }
         
         *this->marqueeText = text;
+        
+        // Notify MarqueeLogicHandler of the text change
+        if (marqueeTextChangeCallback) {
+            marqueeTextChangeCallback(text);
+        }
+        
         return "Marquee text set to: \"" + text + "\"";
     }
 
