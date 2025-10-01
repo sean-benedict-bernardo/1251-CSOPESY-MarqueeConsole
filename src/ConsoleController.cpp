@@ -30,7 +30,7 @@ public:
     ConsoleController() {
         // Initialize shared state
         isRunning = true;
-        isAnimating = true;
+        isAnimating = false;
         speed = 100; // Default animation speed in milliseconds (used for both marquee and GIF)
         marqueeText = "Welcome to CSOPESY Marquee Console!";
         
