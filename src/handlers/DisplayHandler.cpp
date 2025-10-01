@@ -9,6 +9,8 @@
 
 using namespace std;
 
+#define MAX_ASCII_ART_HEIGHT 6
+
 /**
  * Simple ASCII Art Manager for DisplayHandler
  */
@@ -21,7 +23,7 @@ private:
 public:
     SimpleASCIIArt()
     {
-        artHeight = 6;
+        artHeight = MAX_ASCII_ART_HEIGHT;
         loadBasicCharacters();
     }
     

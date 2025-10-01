@@ -1,5 +1,4 @@
-#include "Handler.h"
-#include "FileReader.h"
+#include "FileReader.cpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -12,7 +11,7 @@ using namespace std;
  * MarqueeLogicHandler - Handles marquee text animation and ASCII art rendering
  * Converted from marquee_logic.c and enhanced with Handler architecture
  */
-class MarqueeLogicHandler : public Handler
+class MarqueeLogicHandler
 {
 private:
     // Text and animation state
@@ -45,7 +44,7 @@ public:
      * @param width Display width for the marquee
      * @param height Display height for the marquee
      */
-    MarqueeLogicHandler(int width = 80, int height = 6) : Handler()
+    MarqueeLogicHandler(int width = 80, int height = 6)
     {
         currentText = "";
         scrollPosition = 0;
@@ -80,7 +79,7 @@ protected:
     /**
      * Initialize the marquee handler
      */
-    void initialize() override
+    void initialize()
     {
         // Load ASCII art characters
         try
@@ -101,7 +100,7 @@ protected:
     /**
      * Main processing loop - handles marquee animation
      */
-    void process() override
+    void process()
     {
         auto now = chrono::steady_clock::now();
         
@@ -134,7 +133,7 @@ protected:
     /**
      * Cleanup resources
      */
-    void cleanup() override
+    void cleanup()
     {
         std::lock_guard<std::mutex> lock(textMutex);
         currentText = "";
@@ -145,7 +144,7 @@ public:
     /**
      * Handle input method required by base Handler class
      */
-    vector<string> handleInput(const string& input) override
+    vector<string> handleInput(const string& input)
     {
         vector<string> response;
         response.push_back("MarqueeLogicHandler processes marquee text and animations");
@@ -155,7 +154,7 @@ public:
     /**
      * Get handler type
      */
-    string getHandlerType() const override
+    string getHandlerType() const
     {
         return "MarqueeLogicHandler";
     }

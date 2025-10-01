@@ -329,6 +329,3 @@ private:
         system("cls");
     }
 };
-
-// Main function removed - this is now used as a component class
-// The main function is in OSEmulator.cpp
