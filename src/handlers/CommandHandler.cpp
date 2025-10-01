@@ -205,8 +205,7 @@ private:
         }
         else if (command == "clear" || command == "cls")
         {
-            this->clearScreen();
-            return {""};
+            return {"CLEAR_CONSOLE"};
         }
         else if (command == "status" && DEBUG)
             return {this->status()};
@@ -317,13 +316,5 @@ private:
     {
         *this->isRunning = false;
         return "Exiting program.";
-    }
-
-    /**
-     * Clears the console screen.
-     */
-    void clearScreen()
-    {
-        system("cls");
     }
 };
