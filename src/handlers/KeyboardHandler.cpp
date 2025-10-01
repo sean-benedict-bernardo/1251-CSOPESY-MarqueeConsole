@@ -4,6 +4,7 @@
 #include <queue>
 #include <conio.h>
 #include <windows.h>
+#include <functional>
 
 using namespace std;
 
@@ -28,6 +29,9 @@ private:
     int *speed;
     string *marqueeText;
     
+    // Producer-Consumer callback function
+    function<void(const string&)> commandCallback;
+    
 public:
     /**
      * Constructor for KeyboardHandler
@@ -35,13 +39,15 @@ public:
      * @param isAnimating Pointer to the animation state
      * @param speed Pointer to the marquee speed
      * @param marqueeText Pointer to the marquee text
+     * @param callback Callback function to enqueue commands (from CommandHandler)
      */
-    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText)
+    KeyboardHandler(bool *isRunning, bool *isAnimating, int *speed, string *marqueeText, function<void(const string&)> callback)
     {
         this->isRunning = isRunning;
         this->isAnimating = isAnimating;
         this->speed = speed;
         this->marqueeText = marqueeText;
+        this->commandCallback = callback;
         this->currentInput = "";
         this->historyIndex = -1;
         this->cursorPos = 0;
@@ -74,27 +80,18 @@ public:
     }
     
     /**
-     * Processes buffered keystrokes and returns completed command
-     * @return Command string if Enter was pressed, empty string otherwise
+     * Processes buffered keystrokes and sends commands via callback
+     * Commands are now enqueued in CommandHandler instead of returned
      */
-    string processBuffer()
+    void processBuffer()
     {
-        string command = "";
-        
         while (!keyBuffer.empty())
         {
             char key = keyBuffer.front();
             keyBuffer.pop();
             
-            string result = handleKey(key);
-            if (!result.empty())
-            {
-                command = result;
-                break;
-            }
+            handleKey(key); // No longer returns commands
         }
-        
-        return command;
     }
     
     /**
@@ -176,14 +173,15 @@ private:
     /**
      * Handles regular key input
      * @param key The character key pressed
-     * @return Command string if Enter was pressed, empty string otherwise
+     * Commands are now sent via callback instead of returned
      */
-    string handleKey(char key)
+    void handleKey(char key)
     {
         switch (key)
         {
         case 13: // Enter (Carriage Return)
-            return handleEnter();
+            handleEnter();
+            break;
             
         case 8: // Backspace
             handleBackspace();
@@ -213,8 +211,6 @@ private:
             }
             break;
         }
-        
-        return "";
     }
     
     /**
@@ -270,10 +266,10 @@ private:
     }
     
     /**
-     * Handles Enter key press - completes command input
-     * @return The completed command string
+     * Handles Enter key press - completes command input and sends via callback
+     * Commands are now enqueued in CommandHandler via callback
      */
-    string handleEnter()
+    void handleEnter()
     {
         string command = currentInput;
         
@@ -290,6 +286,12 @@ private:
                     commandHistory.erase(commandHistory.begin());
                 }
             }
+            
+            // Send command to CommandHandler via callback (Producer)
+            if (commandCallback)
+            {
+                commandCallback(command);
+            }
         }
         
         // Reset input state
@@ -297,8 +299,6 @@ private:
         
         // Move to next line
         cout << endl;
-        
-        return command;
     }
     
     /**

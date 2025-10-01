@@ -1,6 +1,9 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <queue>
+#include <mutex>
+#include <functional>
 
 #define DEBUG true
 
@@ -28,6 +31,69 @@ public:
         this->marqueeText = marqueeText;
     }
 
+    /**
+     * Adds a command string to the processing queue (Producer function)
+     * This function is called by the KeyboardHandler via callback
+     * @param commandString The command string to be queued for processing
+     */
+    void enqueueCommand(const string& commandString)
+    {
+        lock_guard<mutex> lock(queueMutex);
+        commandQueue.push(commandString);
+    }
+
+    /**
+     * Processes the next command in the queue (Consumer function)
+     * @return Vector of response messages, empty if no commands in queue
+     */
+    vector<string> processNextCommand()
+    {
+        lock_guard<mutex> lock(queueMutex);
+        
+        if (commandQueue.empty())
+        {
+            return {}; // No commands to process
+        }
+        
+        string commandString = commandQueue.front();
+        commandQueue.pop();
+        
+        // Parse and execute the command
+        return parseInput(commandString);
+    }
+
+    /**
+     * Checks if there are commands waiting in the queue
+     * @return True if there are commands to process, false otherwise
+     */
+    bool hasCommandsInQueue()
+    {
+        lock_guard<mutex> lock(queueMutex);
+        return !commandQueue.empty();
+    }
+
+    /**
+     * Gets the current queue size for debugging purposes
+     * @return Number of commands currently in the queue
+     */
+    size_t getQueueSize()
+    {
+        lock_guard<mutex> lock(queueMutex);
+        return commandQueue.size();
+    }
+
+    /**
+     * Gets a callback function that can be used by KeyboardHandler
+     * to enqueue commands. This enables the producer-consumer pattern.
+     * @return Function object that can be called to enqueue commands
+     */
+    function<void(const string&)> getEnqueueCallback()
+    {
+        return [this](const string& command) {
+            this->enqueueCommand(command);
+        };
+    }
+
     vector<string> parseInput(string input)
     {
         Command cmd = parseCommand(input);
@@ -37,6 +103,10 @@ public:
     }
 
 private:
+    // Producer-Consumer pattern components
+    queue<string> commandQueue;  // Queue to store commands from KeyboardHandler
+    mutex queueMutex;           // Mutex for thread-safe queue operations
+    
     /**
      * Splits the input string into a vector of arguments based on spaces.
      * @param input The input string to split.
