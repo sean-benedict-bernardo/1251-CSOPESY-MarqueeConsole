@@ -30,6 +30,9 @@ private:
     // Producer-Consumer callback function
     std::function<void(const std::string&)> commandCallback;
     
+    // Input display callback function for real-time input display
+    std::function<void(const std::string&)> inputDisplayCallback;
+    
 public:
     /**
      * Constructor for KeyboardHandler
@@ -145,6 +148,11 @@ public:
      */
     void refreshInputDisplay()
     {
+        // Call the input display callback if connected
+        if (inputDisplayCallback) {
+            inputDisplayCallback(currentInput);
+        }
+        
         // Get current cursor position
         GetConsoleScreenBufferInfo(hConsole, &csbi);
         
@@ -168,6 +176,11 @@ public:
     void connectHandler(std::function<void(const std::string&)> callbackFunction)
     {
         commandCallback = std::move(callbackFunction);
+    }
+
+    void connectInputDisplay(std::function<void(const std::string&)> callbackFunction)
+    {
+        inputDisplayCallback = std::move(callbackFunction);
     }
 
 private:

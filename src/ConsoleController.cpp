@@ -4,6 +4,8 @@
 #include "handlers/MarqueeLogicHandler.cpp"
 #include <thread>
 #include <chrono>
+#include <fstream>
+#include <filesystem>
 
 class ConsoleController {
 private:
@@ -12,6 +14,12 @@ private:
     bool isAnimating;
     int speed;
     std::string marqueeText;
+    
+    // GIF animation variables
+    std::vector<std::vector<std::string>> gifFrames;
+    int currentGifFrame;
+    int gifSpeed; // milliseconds between frames
+    bool isGifAnimating;
     
     // Handler instances
     CommandHandler* commandHandler;
@@ -52,6 +60,11 @@ public:
             commandHandler->enqueueCommand(command);
         });
         
+        // Connect KeyboardHandler to DisplayHandler for real-time input display
+        keyboardHandler->connectInputDisplay([this](const std::string& currentInput) {
+            displayHandler->updateInputLine(currentInput);
+        });
+        
         // Set up the marquee logic handler with initial text
         marqueeLogicHandler->setText(marqueeText);
         marqueeLogicHandler->initialize();
@@ -60,7 +73,11 @@ public:
     
     void start() {
         // Initialize the display by clearing screen and drawing initial layout
-        displayHandler->updateDisplay();
+        displayHandler->displayWelcome();
+        
+        bool needsDisplayUpdate = false;
+        auto lastMarqueeUpdate = std::chrono::steady_clock::now();
+        int marqueePosition = 0;
         
         // Main application loop
         while (isRunning) {
@@ -73,27 +90,33 @@ public:
             if (!commandResponses.empty()) {
                 // Display command responses in the console area
                 displayHandler->displayCommandResponse(commandResponses);
+                needsDisplayUpdate = true;
             }
             
-            // Update marquee animation if enabled
+            // Update marquee animation if enabled (throttled)
             if (isAnimating) {
-                marqueeLogicHandler->setText(marqueeText);
-                marqueeLogicHandler->process();
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastMarqueeUpdate);
                 
-                // Get the current marquee display and update display handler
-                std::vector<std::string> marqueeDisplay = marqueeLogicHandler->getCurrentDisplay();
-                // Note: You may need to implement a method in DisplayHandler to update marquee
-                // For now, we'll let the display handler manage its own marquee updates
+                if (elapsed.count() >= speed) {
+                    marqueePosition++;
+                    displayHandler->updateMarqueePosition(marqueePosition);
+                    lastMarqueeUpdate = now;
+                    needsDisplayUpdate = true;
+                }
             }
             
-            // Update the display
-            displayHandler->updateDisplay();
+            // Only update display when necessary
+            if (needsDisplayUpdate) {
+                displayHandler->updateDisplay();
+                needsDisplayUpdate = false;
+            }
             
-            // Control the main loop speed
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // Control the main loop speed - longer sleep since we're not updating constantly
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         
-        // Clean up and exit
-        marqueeLogicHandler->cleanup();
+        // Show exit message
+        displayHandler->displayExit();
     }
 };

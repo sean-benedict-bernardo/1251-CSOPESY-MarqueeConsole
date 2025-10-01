@@ -227,8 +227,11 @@ public:
         CONSOLE_CURSOR_INFO cursorInfo;
         GetConsoleCursorInfo(hConsole, &cursorInfo);
         bool wasVisible = cursorInfo.bVisible;
-        cursorInfo.bVisible = false;
-        SetConsoleCursorInfo(hConsole, &cursorInfo);
+        
+        if (wasVisible) {
+            cursorInfo.bVisible = false;
+            SetConsoleCursorInfo(hConsole, &cursorInfo);
+        }
         
         // Only update specific sections instead of clearing entire screen
         drawMarqueeSection();
@@ -236,7 +239,7 @@ public:
         drawGifSection();
         drawInputArea();
         
-        // Restore cursor visibility if it was visible
+        // Restore cursor visibility only if it was visible before
         if (wasVisible)
         {
             cursorInfo.bVisible = true;
@@ -694,7 +697,19 @@ public:
     void clearConsole()
     {
         textConsoleLines.clear();
+        
+        // Force clear all text console lines on screen
+        int startY = marqueeHeight;
+        int maxLines = textConsoleHeight - 2; // Leave space for input area
+        
+        for (int i = 0; i < maxLines; i++)
+        {
+            setCursorPosition(0, startY + i);
+            std::cout << std::string(textConsoleWidth - 1, ' ');
+        }
+        
         updateDisplay();
+        displayPrompt(); // Redraw the prompt after clearing
     }
     
     /**
